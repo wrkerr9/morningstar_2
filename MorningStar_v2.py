@@ -13,18 +13,24 @@
 
 
 # imports:
+# general:
 
+import sys
+
+# for morningstar reading:
 import serial
 
 import modbus_tk
-import sys
 import modbus_tk.defines as cst
 from modbus_tk import modbus_rtu
 
 from morningstar_lib import *
 
-# I will try experimenting with baudrates to see if it's possible to make it consistent.
-# So far, 9600 baud is the only one that consistently connects at least one.
+#for compressing and sending data;
+
+import json
+
+#our official baudrate is 9600. Nothing more, nothing less.
 b_official = 9600
 
 #to find a port, we will scan them all.
@@ -55,9 +61,6 @@ for p in ports:
 	except(OSError, serial.SerialException):
 		pass
 	
-	
-	
-	
 # To open a MODBUS client in python3 with modbus_tk, use modbus_rtu.RtuMaster.
 # I'm importing it as ModbusSerialClient.
 # We only use RTU mode.
@@ -67,22 +70,10 @@ master = ""
 port = ""
 #I would like a logger to be used.
 logger = modbus_tk.utils.create_logger("console")
-#try:
 
-	# PORT_ACTUAL = "COM4"
-	# master = modbus_rtu.RtuMaster(
-			# serial.Serial(port=PORT_ACTUAL, baudrate=b_official,bytesize=8,parity='N',
-			# stopbits=1,xonxoff=0)
-	# )
-	# master.set_timeout(5.0)
-	# master.set_verbose(True)
-	# logger.info("connected")
-	# logger.info(master.execute(1,cst.READ_HOLDING_REGISTERS,0,4))
-	# x = master.execute(1,cst.READ_HOLDING_REGISTERS,0,4)
-	# print(x)
-# except modbus_tk.modbus.ModbusError as exc:
-	# logger.error("%s- Code=%d",exc, exc.get_exception_code())
-	# exit(1)
+# Let's find our morningstar to be used.
+# I will refactor this code to use classes.
+# I will make a morningstar class that opens itself.
 for p in ports_used:
 	try:
 		master = modbus_rtu.RtuMaster(
@@ -100,6 +91,7 @@ if not connected:
 else:
 	print("Connected on", port,"!")
 
+dataToBeSent = []
 try:
 	
 	data = master.execute(1,cst.READ_HOLDING_REGISTERS,0,4)
@@ -123,6 +115,10 @@ try:
 		print("Battery Voltage at Terminal: ", bat_terminal_voltage)
 		print("Battery Sense Voltage: ", bat_sense_voltage)
 		print("Array Voltage: ", array_voltage)
+		dataToBeSent.append(bat_voltage)
+		dataToBeSent.append(bat_terminal_voltage)
+		dataToBeSent.append(bat_sense_voltage)
+		dataToBeSent.append(array_voltage)
 	except:
 		pass
 	
@@ -136,8 +132,9 @@ try:
 		array_current = data[1]
 		print("Battery Current: ", bat_current)
 		print("Array Current: ", array_current)
+		dataToBeSent.append(bat_current)
+		dataToBeSent.append(array_current)
 	except:
-		print("FUCK YOU")
 		pass
 	#Temperatures:
 	data = retrieveTemperatures(client)
@@ -148,6 +145,9 @@ try:
 		print("Heatsink temperature: " + str(heatsink_temp) + "C")
 		print("RTS temperature: " + str(RTS_temp) + "C")
 		print("Battery regulation temperature: " + str(bat_reg_temp) + "C")
+		dataToBeSent.append(heatsink_temp)
+		dataToBeSent.append(RTS_temp)
+		dataToBeSent.append(bat_reg_temp)
 	except:
 		pass
 	#read data: 
@@ -160,34 +160,42 @@ try:
 	chargeSettings = checkChargeSettings(master, V_PU, I_PU)
 	try:
 		print("Charge Settings: ", chargeSettings)
+		dataToBeSent.append(chargeSettings)
 	except:
 		pass
 	#Today's values
 	todaysValues = retrieveTodaysValues(master, V_PU, I_PU)
 	try:
 		print("Today's values: ", todaysValues)
+		dataToBeSent.append(todaysValues)
 	except:
 		pass
 	#Alarms
 	alarms = retrieveAlarms(master)
-	print("Alarms: ", alarms)
-	
+	try:
+		print("Alarms: ", alarms)
+		dataToBeSent.append(alarms)
+	except:
+		pass
 	#Faults
 	faults = retrieveControllerFaults(master)
 	try:
 		print("Faults: ", faults)
+		dataToBeSent.append(alarms)
 	except:
 		pass
 	#LED State
 	LEDState = retrieveLEDState(master)
 	try:
 		print("LEDState: ", LEDState)
+		dataToBeSent.append(LEDState)
 	except:
 		pass
 	#DIP Switch
 	DIPSwitch = retrieveDIPSwitch(master)
 	try:
 		print("DIP switch: ", DIPSwitch)
+		dataToBeSent.append(DIPSwitch)
 	except:
 		pass
 	
@@ -195,8 +203,13 @@ try:
 	ChargeState = retrieveChargeState(master)
 	try:
 		print("Charge State: ", ChargeState)
+		dataToBeSent.append(ChargeState)
 	except: 
 		pass
+	# Compress the data
+
+	
+	#Send the data somehow
 	
 finally:
 	print("Closing connection.")

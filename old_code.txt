@@ -1,0 +1,20 @@
+old code:
+
+from morningstar_v2.py;
+
+#try:
+
+	# PORT_ACTUAL = "COM4"
+	# master = modbus_rtu.RtuMaster(
+			# serial.Serial(port=PORT_ACTUAL, baudrate=b_official,bytesize=8,parity='N',
+			# stopbits=1,xonxoff=0)
+	# )
+	# master.set_timeout(5.0)
+	# master.set_verbose(True)
+	# logger.info("connected")
+	# logger.info(master.execute(1,cst.READ_HOLDING_REGISTERS,0,4))
+	# x = master.execute(1,cst.READ_HOLDING_REGISTERS,0,4)
+	# print(x)
+# except modbus_tk.modbus.ModbusError as exc:
+	# logger.error("%s- Code=%d",exc, exc.get_exception_code())
+	# exit(1)
